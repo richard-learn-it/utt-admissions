@@ -10,6 +10,7 @@ dotenv.config({ path: path.resolve(moduleDir, '../../.env') });
 
 type AIProviderName = 'openrouter' | 'openai' | 'gemini' | 'anthropic';
 type RuntimeEnv = Record<string, unknown>;
+const DEFAULT_CORS_ORIGINS = 'http://localhost:8080,http://localhost:5173,https://ngocdat.io.vn,https://www.ngocdat.io.vn';
 
 export function applyRuntimeEnv(env: RuntimeEnv = {}): void {
   for (const [key, value] of Object.entries(env)) {
@@ -39,9 +40,10 @@ export const config = {
     return optionalEnv('NODE_ENV', 'development');
   },
   get corsOrigins() {
-    return optionalEnv('CORS_ORIGINS', 'http://localhost:8080,http://localhost:5173')
+    return optionalEnv('CORS_ORIGINS', DEFAULT_CORS_ORIGINS)
       .split(',')
-      .map(s => s.trim());
+      .map(s => s.trim().replace(/\/$/, ''))
+      .filter(Boolean);
   },
 
   ai: {
@@ -77,4 +79,3 @@ export const config = {
 } as const;
 
 export type Config = typeof config;
-

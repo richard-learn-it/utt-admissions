@@ -10,10 +10,11 @@ type RateLimitState = {
 
 const encoder = new TextEncoder();
 const rateLimitStore = new Map<string, RateLimitState>();
+const productionOrigins = ['https://ngocdat.io.vn', 'https://www.ngocdat.io.vn'];
 
 function corsHeaders(request: Request): Record<string, string> {
-  const origin = request.headers.get('Origin');
-  const configuredOrigins = config.corsOrigins;
+  const origin = request.headers.get('Origin')?.replace(/\/$/, '');
+  const configuredOrigins = Array.from(new Set([...config.corsOrigins, ...productionOrigins]));
   const allowAny = configuredOrigins.includes('*');
   const allowOrigin =
     origin && (allowAny || configuredOrigins.includes(origin))
@@ -138,6 +139,17 @@ export default {
 
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders(request) });
+    }
+
+    if (url.pathname === '/' && request.method === 'GET') {
+      return jsonResponse(request, {
+        status: 'ok',
+        service: 'UTT Admissions Backend',
+        endpoints: {
+          health: '/api/health',
+          chat: '/api/chat',
+        },
+      });
     }
 
     if (url.pathname === '/api/health' && request.method === 'GET') {
