@@ -101,7 +101,6 @@ export class OpenRouterProvider implements AIProvider {
         return;
       }
 
-      // @ts-expect-error Node.js ReadableStream compatibility
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';

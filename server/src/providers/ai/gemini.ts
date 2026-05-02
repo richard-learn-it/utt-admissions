@@ -67,7 +67,6 @@ export class GeminiProvider implements AIProvider {
         return;
       }
 
-      // @ts-expect-error Node.js stream compatibility
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';

@@ -1,6 +1,6 @@
 // Main Express server entrypoint
 
-import express from 'express';
+import express, { type NextFunction, type Request, type Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -17,6 +17,43 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 
+function jsonBodyParser(limitBytes: number) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const contentType = req.headers['content-type'] || '';
+    const hasJsonBody = typeof contentType === 'string' && contentType.includes('application/json');
+
+    if (!hasJsonBody || req.method === 'GET' || req.method === 'HEAD') {
+      next();
+      return;
+    }
+
+    let size = 0;
+    const chunks: Buffer[] = [];
+
+    req.on('data', (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > limitBytes) {
+        res.status(413).json({ error: 'Payload too large.' });
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+
+    req.on('end', () => {
+      try {
+        const raw = Buffer.concat(chunks).toString('utf8');
+        req.body = raw.length > 0 ? JSON.parse(raw) : {};
+        next();
+      } catch {
+        res.status(400).json({ error: 'Invalid JSON.' });
+      }
+    });
+
+    req.on('error', next);
+  };
+}
+
 // ─── Security ──────────────────────────────────────────────────
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -32,8 +69,7 @@ app.use(cors({
 }));
 
 // ─── Body parsing ──────────────────────────────────────────────
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(jsonBodyParser(10 * 1024 * 1024));
 
 // ─── Request logging ──────────────────────────────────────────
 app.use(morgan('short'));

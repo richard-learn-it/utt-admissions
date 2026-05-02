@@ -6,12 +6,16 @@ import { getAIProvider } from '../../providers/ai/index.js';
 import { shouldSearch, searchWeb, formatSearchContext } from '../search/searchService.js';
 import { buildSystemPrompt } from './systemPrompt.js';
 import { logger, isValidImageDataURI } from '../../utils/index.js';
-import type { Response } from 'express';
+
+interface ChatStreamWriter {
+  write: (chunk: string) => void;
+  end: () => void;
+}
 
 interface ChatStreamOptions {
   messages: ChatMessageInput[];
   memoryContext?: string;  // Long-term memory context from client
-  res: Response;
+  res: ChatStreamWriter;
   signal?: AbortSignal;
 }
 

@@ -3,9 +3,10 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const moduleUrl = (import.meta as ImportMeta & { url?: string }).url;
+const moduleDir = moduleUrl ? path.dirname(fileURLToPath(moduleUrl)) : '.';
 
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config({ path: path.resolve(moduleDir, '../../.env') });
 
 /** Safely read an env var, throw if missing and required */
 function requireEnv(key: string): string {
@@ -45,7 +46,7 @@ export const config = {
 
   upload: {
     maxFileSizeMB: parseInt(optionalEnv('MAX_FILE_SIZE_MB', '5'), 10),
-    uploadDir: optionalEnv('UPLOAD_DIR', path.resolve(__dirname, '../../uploads')),
+    uploadDir: optionalEnv('UPLOAD_DIR', path.resolve(moduleDir, '../../uploads')),
     allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
   },
 } as const;
