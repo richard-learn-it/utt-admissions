@@ -1,4 +1,4 @@
-import { applyRuntimeEnv, config } from './config/index.js';
+import { applyRuntimeEnv, config, getMissingRequiredEnv } from './config/index.js';
 import { processChatStream } from './modules/chat/chatService.js';
 import type { ChatMessageInput } from './types/index.js';
 import { logger } from './utils/index.js';
@@ -10,11 +10,16 @@ type RateLimitState = {
 
 const encoder = new TextEncoder();
 const rateLimitStore = new Map<string, RateLimitState>();
-const productionOrigins = ['https://ngocdat.io.vn', 'https://www.ngocdat.io.vn'];
+const alwaysAllowedOrigins = [
+  'http://localhost:8080',
+  'http://localhost:5173',
+  'https://ngocdat.io.vn',
+  'https://www.ngocdat.io.vn',
+];
 
 function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get('Origin')?.replace(/\/$/, '');
-  const configuredOrigins = Array.from(new Set([...config.corsOrigins, ...productionOrigins]));
+  const configuredOrigins = Array.from(new Set([...config.corsOrigins, ...alwaysAllowedOrigins]));
   const allowAny = configuredOrigins.includes('*');
   const allowOrigin =
     origin && (allowAny || configuredOrigins.includes(origin))
@@ -72,6 +77,28 @@ function validateMessages(messages: unknown): messages is ChatMessageInput[] {
 }
 
 async function handleChat(request: Request): Promise<Response> {
+  const missingEnv = getMissingRequiredEnv();
+  if (missingEnv.length > 0) {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+          error: `Backend is missing required environment variables: ${missingEnv.join(', ')}`,
+        })}\n\n`));
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+        controller.close();
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        ...corsHeaders(request),
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'X-Accel-Buffering': 'no',
+      },
+    });
+  }
+
   if (isRateLimited(request, 30, 60 * 1000)) {
     return jsonResponse(request, { error: 'Too many requests. Please retry in 1 minute.' }, 429);
   }
@@ -153,6 +180,16 @@ export default {
     }
 
     if (url.pathname === '/api/health' && request.method === 'GET') {
+      const missingEnv = getMissingRequiredEnv();
+      if (missingEnv.length > 0) {
+        return jsonResponse(request, {
+          status: 'error',
+          missingEnv,
+          searchEnabled: config.search.enabled,
+          timestamp: new Date().toISOString(),
+        }, 500);
+      }
+
       return jsonResponse(request, {
         status: 'ok',
         provider: config.ai.provider,

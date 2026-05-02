@@ -13,6 +13,7 @@ const VISION_MODELS = [
   'openai/gpt-4o', 'openai/gpt-4o-mini', 'openai/gpt-4-turbo',
   'google/gemini-pro-vision', 'google/gemini-1.5-pro', 'google/gemini-1.5-flash',
   'google/gemini-2.0-flash-exp', 'google/gemini-2.5-flash-preview',
+  'google/gemini-2.5-flash',
   'anthropic/claude-3-opus', 'anthropic/claude-3-sonnet', 'anthropic/claude-3-haiku',
   'anthropic/claude-3.5-sonnet', 'anthropic/claude-4-sonnet',
   'meta-llama/llama-3.2-90b-vision-instruct',
@@ -89,6 +90,11 @@ export class OpenRouterProvider implements AIProvider {
         }
         if (response.status === 402) {
           callbacks.onError('Đã hết hạn mức sử dụng AI. Vui lòng liên hệ quản trị viên.');
+          return;
+        }
+
+        if (response.status === 403) {
+          callbacks.onError('OpenRouter tu choi yeu cau (403). Kiem tra API key, credits va quyen truy cap model.');
           return;
         }
 

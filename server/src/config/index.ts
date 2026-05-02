@@ -11,6 +11,7 @@ dotenv.config({ path: path.resolve(moduleDir, '../../.env') });
 type AIProviderName = 'openrouter' | 'openai' | 'gemini' | 'anthropic';
 type RuntimeEnv = Record<string, unknown>;
 const DEFAULT_CORS_ORIGINS = 'http://localhost:8080,http://localhost:5173,https://ngocdat.io.vn,https://www.ngocdat.io.vn';
+const REQUIRED_ENV_KEYS = ['AI_PROVIDER', 'AI_API_KEY', 'AI_MODEL'] as const;
 
 export function applyRuntimeEnv(env: RuntimeEnv = {}): void {
   for (const [key, value] of Object.entries(env)) {
@@ -30,6 +31,10 @@ function requireEnv(key: string): string {
 
 function optionalEnv(key: string, fallback: string): string {
   return process.env[key] || fallback;
+}
+
+export function getMissingRequiredEnv(): string[] {
+  return REQUIRED_ENV_KEYS.filter(key => !process.env[key]);
 }
 
 export const config = {
