@@ -1,4 +1,4 @@
-import { config } from './config/index.js';
+import { applyRuntimeEnv, config } from './config/index.js';
 import { processChatStream } from './modules/chat/chatService.js';
 import type { ChatMessageInput } from './types/index.js';
 import { logger } from './utils/index.js';
@@ -131,7 +131,9 @@ async function handleChat(request: Request): Promise<Response> {
 }
 
 export default {
-  async fetch(request: Request): Promise<Response> {
+  async fetch(request: Request, env: Record<string, unknown>): Promise<Response> {
+    applyRuntimeEnv(env);
+
     const url = new URL(request.url);
 
     if (request.method === 'OPTIONS') {
